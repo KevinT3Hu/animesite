@@ -91,6 +91,7 @@ const loginProcessing = ref(false);
 const serverError = ref(false);
 const otpNotValid = ref(false);
 const newWatchListDialog = ref(false);
+const drawer = ref<boolean|null>(null)
 
 watch(loginOverlay, (newValue) => {
   if (!newValue) {
@@ -102,12 +103,18 @@ watch(loginOverlay, (newValue) => {
 
 <template>
   <v-app>
-    <v-app-bar density="comfortable">
+    <v-app-bar scroll-behavior="collapse" density="comfortable">
+
+      <template #prepend>
+        <v-app-bar-nav-icon @click.stop="drawer=true"></v-app-bar-nav-icon>
+      </template>
 
       <v-app-bar-title>Anime</v-app-bar-title>
 
       <template #append>
-        <v-btn v-if="!loggedIn" @click="loginOverlay = true">Login</v-btn>
+        <v-btn v-if="!loggedIn" @click="loginOverlay = true" icon>
+          <v-icon>mdi-login</v-icon>
+        </v-btn>
         <v-btn v-else icon @click="logout">
           <v-icon>mdi-logout</v-icon>
         </v-btn>
@@ -142,7 +149,7 @@ watch(loginOverlay, (newValue) => {
       </v-card>
     </v-dialog>
 
-    <v-navigation-drawer>
+    <v-navigation-drawer v-model="drawer">
       <v-list nav>
         <v-list-item title="Home" value="home" @click="$router.push({name:'home'})"></v-list-item>
         <v-list-item v-for="watchList in allWatchLists" :key="watchList.title" @click="navigateToWatchList(watchList.title)" :title="watchList.title" :value="watchList.title">

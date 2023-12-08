@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { bangumiClient } from '@/ApiHelper';
-import { reactive, type PropType, onMounted, computed } from 'vue';
-
+import { bangumiClient, getTokenConfig, httpClient } from '@/ApiHelper';
+import { useClipboard } from '@vueuse/core';
+import { AxiosRequestConfig } from 'axios';
+import { reactive, type PropType, onMounted, computed, ref } from 'vue';
 
 const props = defineProps({
     state: {
@@ -18,7 +19,12 @@ const emits = defineEmits<{
     changeArchivedState: [archived: boolean],
 }>()
 
+const { copy } = useClipboard()
+
 const episodes = reactive<Episode[]>([])
+const rating = ref<number>(props.state?.rating ?? 0)
+
+const loggedIn = ref(false)
 
 const episodesToShow = computed(() => {
     if (props.showAll) {
@@ -30,6 +36,8 @@ const episodesToShow = computed(() => {
     }
 })
 
+let tokenConfig: AxiosRequestConfig | undefined = undefined
+
 onMounted(() => {
     bangumiClient.get(`/v0/episodes`, {
         params: {
@@ -39,6 +47,12 @@ onMounted(() => {
     }).then((response) => {
         episodes.splice(0, episodes.length, ...response.data.data)
     })
+
+    getTokenConfig().then((config) => {
+        loggedIn.value = true
+        tokenConfig = config
+    })
+
 })
 
 function episodeWatched(ep: number) {
@@ -59,14 +73,54 @@ function changeArchivedState(archived: boolean) {
     emits('changeArchivedState', archived)
 }
 
+const ratingProcessing = ref(false)
+
+function updateRating() {
+    ratingProcessing.value = true
+    httpClient.post('/anime/update_anime_rating', {
+        anime_id: props.state?.anime_item.id,
+        rating: rating.value,
+    },tokenConfig).then(()=>{
+        window.location.reload()
+    }).finally(() => {
+        ratingProcessing.value = false
+        showRatingDialog.value = false
+    })
+}
+
+function copyTitle() {
+    copy(props.state?.anime_item.name_cn ?? '')
+}
+
+const showRatingDialog = ref(false)
+
+function showRating() {
+    showRatingDialog.value = true
+}
+
 </script>
 
 <template>
     <div class="s_wrapper">
         <img class="image" :src="state?.anime_item.images.common" />
         <div class="anime_content">
-            <a :href="'https://bangumi.tv/subject/' + state?.anime_item.id" target="_blank" rel="noopener noreferrer"
-                class="title_cn">{{ state?.anime_item.name_cn }}</a>
+            <div class="title_bar">
+                <div class="title_wrapper">
+                    <a :href="'https://bangumi.tv/subject/' + state?.anime_item.id" target="_blank"
+                        rel="noopener noreferrer" class="title_cn">{{ state?.anime_item.name_cn }}</a>
+                    <v-btn variant="text" icon="mdi-content-copy" @click="copyTitle" class="h-25"></v-btn>
+                    <span v-if="state?.rating" class="ml-2" style="color:blue">{{ state?.rating }} / 5</span>
+                </div>
+                <div class="anime_actions">
+                    <v-btn icon @click="changeArchivedState(!state?.archived)">
+                        <v-icon>{{ state?.archived ? 'mdi-unarchive' : 'mdi-archive' }}</v-icon>
+                    </v-btn>
+                    <v-btn icon @click="showRating">
+                        <v-icon>mdi-thumbs-up-down</v-icon>
+                    </v-btn>
+                </div>
+            </div>
+
             <p>{{ state?.anime_item.name }}</p>
             <div class="episodes">
                 <div v-ripple class="episode rounded" v-for="episode in episodesToShow" :key="episode.id"
@@ -84,6 +138,19 @@ function changeArchivedState(archived: boolean) {
             <p>{{ state?.anime_item.summary }}</p>
         </div>
     </div>
+
+    <v-dialog width="500" v-model="showRatingDialog">
+        <v-card>
+            <v-card-title>Rating {{ state?.anime_item.name_cn }}</v-card-title>
+            <v-card-text class="d-flex justify-center">
+                <v-rating v-model="rating" active-color="primary"></v-rating>
+            </v-card-text>
+            <v-card-actions>
+                <v-btn @click="showRatingDialog = false">Cancel</v-btn>
+                <v-btn @click="updateRating" :loading="ratingProcessing">OK</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
 
 <style scoped>
@@ -144,4 +211,28 @@ function changeArchivedState(archived: boolean) {
 .name_jp {
     font-size: 0.6rem;
 }
+
+.title_bar {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.title_wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.anime_actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
 </style>

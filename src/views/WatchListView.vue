@@ -213,8 +213,11 @@ const loading = ref(true)
 
     <v-list v-else>
         <v-list-item v-for="animeState in animeStates" :key="animeState.anime_id">
-            <a :href="'https://bangumi.tv/subject/' + animeState.anime_id" target="_blank" rel="noopener noreferrer"
+            <div class="d-flex">
+                <a :href="'https://bangumi.tv/subject/' + animeState.anime_id" target="_blank" rel="noopener noreferrer"
                 class="title_cn">{{ animeState.anime_item.name_cn }}</a>
+                <span v-if="animeState.rating" class="ml-2" style="color:blue">{{ animeState.rating }} / 5</span>
+            </div>
             <v-divider></v-divider>
         </v-list-item>
     </v-list>
