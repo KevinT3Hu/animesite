@@ -77,7 +77,12 @@ function processAddAnime(id: number) {
 
 function fetchWatchListContent() {
     loading.value = true
-    httpClient.get<WatchList>(`/anime/get_watch_list/${props.title}`, tokenConfig).then((response) => {
+    httpClient.get<WatchList>('/anime/get_watch_list',{
+        params: {
+            watch_list_name: props.title
+        },
+        ...tokenConfig
+    }).then((response) => {
         animes.splice(0, animes.length, ...response.data.animes)
     }).finally(() => {
         loading.value = false
