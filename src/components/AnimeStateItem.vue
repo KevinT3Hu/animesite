@@ -30,9 +30,19 @@ const episodesToShow = computed(() => {
     if (props.showAll) {
         return episodes
     } else {
-        return episodes.filter((episode) => {
-            return (!episodeWatched(episode.ep)) && (episodeAired(episode.airdate))
+        let showedEpisodes:Episode[] = []
+        let containOne = true
+        episodes.forEach((episode) => {
+            if (!episodeWatched(episode.ep)) {
+                if(episodeAired(episode.airdate)){
+                    showedEpisodes.push(episode)
+                } else if(containOne) {
+                    showedEpisodes.push(episode)
+                    containOne = false
+                }
+            }
         })
+        return showedEpisodes
     }
 })
 
@@ -111,7 +121,7 @@ function showRating() {
                     <v-btn variant="text" icon="mdi-content-copy" @click="copyTitle" class="h-25"></v-btn>
                     <span v-if="state?.rating" class="ml-2" style="color:blue">{{ state?.rating }} / 5</span>
                 </div>
-                <div class="anime_actions">
+                <div v-if="loggedIn" class="anime_actions">
                     <v-btn icon @click="changeArchivedState(!state?.archived)">
                         <v-icon>{{ state?.archived ? 'mdi-unarchive' : 'mdi-archive' }}</v-icon>
                     </v-btn>
@@ -138,6 +148,8 @@ function showRating() {
             <p>{{ state?.anime_item.summary }}</p>
         </div>
     </div>
+
+    <v-divider class="mt-2 mb-2"></v-divider>
 
     <v-dialog width="500" v-model="showRatingDialog">
         <v-card>
@@ -197,6 +209,10 @@ function showRating() {
     align-items: center;
     justify-content: center;
     border: 1px solid #d8eee4;
+}
+
+.episode:hover {
+    cursor: pointer;
 }
 
 .not_aired {

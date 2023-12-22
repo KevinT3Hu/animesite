@@ -58,26 +58,23 @@ function processAddAnime(id: number) {
                 processing.value = false
                 sb('Anime added to watch list')
                 fetchWatchListContent()
-            }).catch((err) => {
+            }).catch(() => {
                 processing.value = false
-                console.log(err)
                 sb('Failed to add anime to watch list')
             })
-        }).catch((err) => {
+        }).catch(() => {
             processing.value = false
-            console.log(err)
             sb('Failed to add anime to database')
         })
-    }).catch((err) => {
+    }).catch(() => {
         processing.value = false
-        console.log(err)
         sb('Failed to get anime info from bangumi')
     })
 }
 
 function fetchWatchListContent() {
     loading.value = true
-    httpClient.get<WatchList>('/anime/get_watch_list',{
+    httpClient.get<WatchList>('/anime/get_watch_list', {
         params: {
             watch_list_name: props.title
         },
@@ -108,6 +105,10 @@ function changeWatchedState(animeId: number, ep: number) {
             }
         })
     }
+}
+
+function changeArchivedState(animeId: number) {
+    // TODO
 }
 
 function searchForAnime() {
@@ -153,34 +154,36 @@ const loading = ref(true)
         <v-toolbar>
             <v-toolbar-title>{{ title }}</v-toolbar-title>
             <v-spacer></v-spacer>
-            <v-btn icon @click="showDetails = !showDetails">
-                <v-icon v-if="showDetails">mdi-eye</v-icon>
-                <v-icon v-else>mdi-eye-off</v-icon>
-            </v-btn>
-            <v-dialog width="500">
-                <template v-slot:activator="{ props }">
-                    <v-btn icon v-bind="props">
-                        <v-icon>mdi-delete</v-icon>
-                    </v-btn>
-                </template>
+            <div>
+                <v-btn icon @click="showDetails = !showDetails">
+                    <v-icon v-if="showDetails">mdi-eye</v-icon>
+                    <v-icon v-else>mdi-eye-off</v-icon>
+                </v-btn>
+                <v-dialog width="500">
+                    <template v-slot:activator="{ props }">
+                        <v-btn v-if="loggedIn" icon v-bind="props">
+                            <v-icon>mdi-delete</v-icon>
+                        </v-btn>
+                    </template>
 
-                <template v-slot:default="{ isActive }">
-                    <v-card title="Delete Watch List">
-                        <v-card-text>
-                            <p>Are you sure you want to delete this watch list?</p>
-                        </v-card-text>
-                        <v-card-actions>
-                            <v-spacer></v-spacer>
-                            <v-btn @click="deleteWatchList">Yes</v-btn>
-                            <v-btn @click="isActive.value = false">No</v-btn>
-                        </v-card-actions>
-                    </v-card>
-                </template>
+                    <template v-slot:default="{ isActive }">
+                        <v-card title="Delete Watch List">
+                            <v-card-text>
+                                <p>Are you sure you want to delete this watch list?</p>
+                            </v-card-text>
+                            <v-card-actions>
+                                <v-spacer></v-spacer>
+                                <v-btn @click="deleteWatchList">Yes</v-btn>
+                                <v-btn @click="isActive.value = false">No</v-btn>
+                            </v-card-actions>
+                        </v-card>
+                    </template>
 
-            </v-dialog>
-            <v-btn icon @click="showAddAnimeDrawer = true">
-                <v-icon>mdi-plus</v-icon>
-            </v-btn>
+                </v-dialog>
+                <v-btn v-if="loggedIn" icon @click="showAddAnimeDrawer = true">
+                    <v-icon>mdi-plus</v-icon>
+                </v-btn>
+            </div>
         </v-toolbar>
     </v-layout>
 
@@ -210,7 +213,8 @@ const loading = ref(true)
     <v-list v-if="showDetails">
         <v-list-item v-for="animeState in animeStates" :key="animeState.anime_id">
             <AnimeStateItem :state="animeState" v-if="animeState.visibility"
-                @change-watched-state="(ep) => changeWatchedState(animeState.anime_id, ep)" />
+                @change-watched-state="(ep) => changeWatchedState(animeState.anime_id, ep)"
+                @change-archived-state="changeArchivedState(animeState.anime_id)" />
         </v-list-item>
     </v-list>
 
@@ -220,7 +224,7 @@ const loading = ref(true)
         <v-list-item v-for="animeState in animeStates" :key="animeState.anime_id">
             <div class="d-flex">
                 <a :href="'https://bangumi.tv/subject/' + animeState.anime_id" target="_blank" rel="noopener noreferrer"
-                class="title_cn">{{ animeState.anime_item.name_cn }}</a>
+                    class="title_cn">{{ animeState.anime_item.name_cn }}</a>
                 <span v-if="animeState.rating" class="ml-2" style="color:blue">{{ animeState.rating }} / 5</span>
             </div>
             <v-divider></v-divider>

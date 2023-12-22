@@ -64,7 +64,6 @@ watch(animeStates, (newValue) => {
                     animesToday.push(animeState.anime_id);
                 }
             }
-            console.log(animesToday);
         });
     });
 });
@@ -172,6 +171,10 @@ function changeWatchedState(animeId: number, ep: number) {
     width: 150px;
     margin-left: 10px;
     margin-right: 10px;
+}
+
+.anime_img:hover {
+    cursor: pointer;
 }
 
 .title {
