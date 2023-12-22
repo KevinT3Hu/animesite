@@ -27,7 +27,7 @@ onMounted(() => {
 watch(loginOTP, (newValue) => {
   if (newValue.length === 8) {
     loginProcessing.value = true
-    httpClient.post('/auth', {
+    httpClient.post('/login', {
       otp: newValue
     }).then(res => {
       loginOverlay.value = false
