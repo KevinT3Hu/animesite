@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { bangumiClient, getTokenConfig, httpClient } from '@/ApiHelper';
-import { onMounted, reactive, ref, watch } from 'vue';
+import { bangumiClient } from '@/ApiHelper';
+import { reactive, ref } from 'vue';
 import AnimeItem from '@/components/AnimeItem.vue'
 import AnimeStateItem from '@/components/AnimeStateItem.vue';
-import { AxiosRequestConfig } from 'axios';
 import { useRouter } from 'vue-router';
+import { AnimeViewModel } from '@/AnimeViewModel';
+import { computed } from 'vue';
 
 const props = defineProps({
     title: {
@@ -12,99 +13,30 @@ const props = defineProps({
     }
 })
 
+const viewModel = AnimeViewModel.getInstance()
+
 const router = useRouter()
 
-let tokenConfig: AxiosRequestConfig | undefined = undefined
-const loggedIn = ref(false)
-
-const animes = reactive<number[]>([])
-const animeStates = reactive<AnimeState[]>([])
+const animeStates = computed(()=>{
+    return viewModel.allAnimes.get(props.title!!)!!.map((id) => {
+        return viewModel.allAnimeStates.get(id)!!
+    })
+})
 
 const animeSearch = ref('')
 const searchResults = reactive<AnimeSearchResult[]>([])
 
-getTokenConfig().then((config) => {
-    tokenConfig = config
-    loggedIn.value = true
-})
-
-onMounted(() => {
-    fetchWatchListContent()
-})
-
-watch(props, () => {
-    fetchWatchListContent()
-})
-
-watch(animes, async (newAnimes) => {
-    httpClient.post<AnimeState[]>(`/anime/get_anime_states`, {
-        anime_ids: newAnimes
-    }, tokenConfig).then((response) => {
-        animeStates.splice(0, animeStates.length, ...response.data)
-    })
-})
-
 function processAddAnime(id: number) {
     // get AnimeItem from bangumi
     processing.value = true
-    bangumiClient.get<AnimeItem>('v0/subjects/' + id).then((ret) => {
-        const item = ret.data
-        // add to database
-        httpClient.post('anime/insert_anime_item', item, tokenConfig).then(() => {
-            httpClient.post('anime/add_item_to_watch_list', {
-                anime_id: id,
-                watch_list_name: props.title
-            }, tokenConfig).then(() => {
-                processing.value = false
-                sb('Anime added to watch list')
-                fetchWatchListContent()
-            }).catch(() => {
-                processing.value = false
-                sb('Failed to add anime to watch list')
-            })
-        }).catch(() => {
-            processing.value = false
-            sb('Failed to add anime to database')
-        })
-    }).catch(() => {
+    viewModel.addAnime(id,props.title!!).finally(() => {
         processing.value = false
-        sb('Failed to get anime info from bangumi')
-    })
-}
-
-function fetchWatchListContent() {
-    loading.value = true
-    httpClient.get<WatchList>('/anime/get_watch_list', {
-        params: {
-            watch_list_name: props.title
-        },
-        ...tokenConfig
-    }).then((response) => {
-        animes.splice(0, animes.length, ...response.data.animes)
-    }).finally(() => {
-        loading.value = false
+        showAddAnimeDrawer.value = false
     })
 }
 
 function changeWatchedState(animeId: number, ep: number) {
-    if (loggedIn.value) {
-        const watched = animeStates.find((state) => state.anime_id === animeId)?.watched_episodes.includes(ep) ?? false
-        const nowWatched = !watched
-        httpClient.post('anime/update_episode_watched_state', {
-            anime_id: animeId,
-            ep: ep,
-            watched: nowWatched
-        }, tokenConfig).then(() => {
-            if (nowWatched) {
-                animeStates.find((state) => state.anime_id === animeId)?.watched_episodes.push(ep)
-            } else {
-                const index = animeStates.find((state) => state.anime_id === animeId)?.watched_episodes.indexOf(ep)
-                if (index !== undefined && index !== -1) {
-                    animeStates.find((state) => state.anime_id === animeId)?.watched_episodes.splice(index, 1)
-                }
-            }
-        })
-    }
+    viewModel.changeWatchedState(animeId, ep)
 }
 
 function changeArchivedState(animeId: number) {
@@ -124,7 +56,7 @@ function searchForAnime() {
 }
 
 function deleteWatchList() {
-    httpClient.post('anime/delete_watch_list', { watch_list_name: props.title }, tokenConfig).then(() => {
+    viewModel.deleteWatchList(props.title!!).then(() => {
         router.push({
             name: 'home',
         })
@@ -132,20 +64,11 @@ function deleteWatchList() {
     })
 }
 
-const showSnackBar = ref(false)
-const snackBarMsg = ref('')
-function sb(msg: string) {
-    snackBarMsg.value = msg
-    showSnackBar.value = true
-}
-
 const processing = ref(false)
 
 const showAddAnimeDrawer = ref(false)
 
 const showDetails = ref(true)
-
-const loading = ref(true)
 
 </script>
 
@@ -161,7 +84,7 @@ const loading = ref(true)
                 </v-btn>
                 <v-dialog width="500">
                     <template v-slot:activator="{ props }">
-                        <v-btn v-if="loggedIn" icon v-bind="props">
+                        <v-btn v-if="viewModel.loggedIn" icon v-bind="props">
                             <v-icon>mdi-delete</v-icon>
                         </v-btn>
                     </template>
@@ -180,14 +103,12 @@ const loading = ref(true)
                     </template>
 
                 </v-dialog>
-                <v-btn v-if="loggedIn" icon @click="showAddAnimeDrawer = true">
+                <v-btn v-if="viewModel.loggedIn" icon @click="showAddAnimeDrawer = true">
                     <v-icon>mdi-plus</v-icon>
                 </v-btn>
             </div>
         </v-toolbar>
     </v-layout>
-
-    <v-progress-linear v-if="loading" indeterminate></v-progress-linear>
 
     <v-navigation-drawer v-model="showAddAnimeDrawer" location="right" temporary width="500">
         <template #prepend>
@@ -202,7 +123,7 @@ const loading = ref(true)
         <v-list>
             <v-list-item v-for="result in searchResults" :key="result.id">
                 <anime-item :name_cn="result.name_cn" :name="result.name" :image="result.image" :summary="result.summary"
-                    :id="result.id" :rank="result.rank" :score="result.score" :contained="animes.includes(result.id)"
+                    :id="result.id" :rank="result.rank" :score="result.score" :contained="viewModel.allAnimes.get(props.title!!)!!.includes(result.id)"
                     @add="processAddAnime(result.id)"></anime-item>
             </v-list-item>
         </v-list>
@@ -230,8 +151,4 @@ const loading = ref(true)
             <v-divider></v-divider>
         </v-list-item>
     </v-list>
-
-    <v-snackbar v-model="showSnackBar" timeout="3000">
-        {{ snackBarMsg }}
-    </v-snackbar>
 </template>

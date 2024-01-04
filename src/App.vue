@@ -1,54 +1,36 @@
 <script setup lang="ts">
-import { AxiosRequestConfig } from 'axios';
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { generateTokenConfig, getTokenConfig, httpClient } from './ApiHelper';
+import { AnimeViewModel, LoginResult } from './AnimeViewModel';
 
 const router = useRouter();
-
-const loggedIn = ref(false);
-var tokenConfig: AxiosRequestConfig | undefined = undefined
-
-const allWatchLists = reactive<WatchList[]>([]);
 
 const loginOTP = ref('');
 
 const newWatchListTitle = ref('');
 
+const viewModel = AnimeViewModel.getInstance();
+
 onMounted(() => {
-  getTokenConfig().then((config) => {
-    tokenConfig = config;
-    loggedIn.value = true;
-  });
-  fetchWatchList();
   router.push({ name: 'home' });
 });
 
 watch(loginOTP, (newValue) => {
   if (newValue.length === 8) {
     loginProcessing.value = true
-    httpClient.post('/login', {
-      otp: newValue
-    }).then(res => {
-      loginOverlay.value = false
-      loggedIn.value = true
-      tokenConfig = generateTokenConfig(res.data)
-      localStorage.setItem('token', res.data)
-    }).catch(err => {
-      serverError.value = false
-      otpNotValid.value = false
-      switch (err.response.status) {
-        case 401:
+    viewModel.login(newValue).then(res => {
+      switch(res) {
+        case LoginResult.Success:
+          loginOverlay.value = false
+          break;
+        case LoginResult.Invalid:
           otpNotValid.value = true
-          console.log("401")
           break;
-        case 500:
+        case LoginResult.Error:
           serverError.value = true
-          console.log("500")
-          break;
-        default:
           break;
       }
+      loginOverlay.value = false
     }).finally(() => {
       loginProcessing.value = false
     })
@@ -57,32 +39,27 @@ watch(loginOTP, (newValue) => {
   }
 });
 
-function fetchWatchList() {
-  httpClient.get<WatchList[]>('/anime/list', tokenConfig).then((response) => {
-    allWatchLists.splice(0, allWatchLists.length, ...response.data)
-  })
-}
-
 function createNewWatchList() {
-    httpClient.post('/anime/add_new_watch_list', { watch_list_name: newWatchListTitle.value }, tokenConfig).then(() => {
-        fetchWatchList()
-        newWatchListDialog.value = false
-        router.push({ name: 'animeWatchList', params: { title: newWatchListTitle.value } })
-    }).finally(() => {
-        newWatchListTitle.value = ''
-    })
-}
-
-function logout() {
-  httpClient.post('/logout', {
-    token: localStorage.getItem("token")
-  }, tokenConfig).then(() => {
-    localStorage.removeItem("token")
-    location.reload()
+  viewModel.createNewWatchList(newWatchListTitle.value).then((ret)=>{
+    if (ret) {
+      newWatchListDialog.value = false
+      router.push({ name: 'animeWatchList', params: { title: newWatchListTitle.value } })
+    }
+    newWatchListTitle.value = ''
   })
 }
+
+// function logout() {
+//   httpClient.post('/logout', {
+//     token: localStorage.getItem("token")
+//   }, tokenConfig).then(() => {
+//     localStorage.removeItem("token")
+//     location.reload()
+//   })
+// }
 
 function navigateToWatchList(title:string) {
+  console.log(title)
   router.push({ name: 'watchList', params: { title: title } })
 }
 
@@ -99,23 +76,27 @@ watch(loginOverlay, (newValue) => {
   }
 })
 
+// if on mobile device, scroll behavior is collapse
+const isMobile = window.innerWidth <= 768
+const scrollBehavior = isMobile ? 'collapse' : undefined
+
 </script>
 
 <template>
   <v-app>
-    <v-app-bar scroll-behavior="collapse" density="comfortable">
+    <v-app-bar :scroll-behavior="scrollBehavior" density="comfortable">
 
-      <template #prepend>
+      <template #prepend v-if="isMobile">
         <v-app-bar-nav-icon @click.stop="drawer=true"></v-app-bar-nav-icon>
       </template>
 
       <v-app-bar-title>Anime</v-app-bar-title>
 
       <template #append>
-        <v-btn v-if="!loggedIn" @click="loginOverlay = true" icon>
+        <v-btn v-if="!viewModel.loggedIn" @click="loginOverlay = true" icon>
           <v-icon>mdi-login</v-icon>
         </v-btn>
-        <v-btn v-else icon @click="logout">
+        <v-btn v-else icon>
           <v-icon>mdi-logout</v-icon>
         </v-btn>
       </template>
@@ -152,18 +133,22 @@ watch(loginOverlay, (newValue) => {
     <v-navigation-drawer v-model="drawer">
       <v-list nav>
         <v-list-item title="Home" value="home" @click="$router.push({name:'home'})"></v-list-item>
-        <v-list-item v-for="watchList in allWatchLists" :key="watchList.title" @click="navigateToWatchList(watchList.title)" :title="watchList.title" :value="watchList.title">
+        <v-list-item v-for="watchList in viewModel.allWatchLists" :key="watchList.title" @click="navigateToWatchList(watchList.title)" :title="watchList.title" :value="watchList.title">
         </v-list-item>
       </v-list>
       <v-divider></v-divider>
 
       <template #append>
-        <div v-if="loggedIn" class="d-flex mx-auto my-2 justify-center w-100">
+        <div v-if="viewModel.loggedIn" class="d-flex mx-auto my-2 justify-center w-100">
           <v-btn color="#d8eee4" @click="newWatchListDialog=true">Create new watch list</v-btn>
         </div>
       </template>
 
     </v-navigation-drawer>
+
+    <v-snackbar v-model="viewModel.showSnackBar.value" timeout="3000">
+        {{ viewModel.snackBarMsg.value }}
+    </v-snackbar>
 
     <v-main>
       <router-view></router-view>

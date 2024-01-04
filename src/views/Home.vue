@@ -1,61 +1,42 @@
 <script setup lang="ts">
-import { bangumiClient, getTokenConfig, httpClient } from '@/ApiHelper';
-import { onMounted, reactive, ref, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import dayjs from 'dayjs';
 import AnimeStateItem from '@/components/AnimeStateItem.vue';
-import type { AxiosRequestConfig } from 'axios';
-
-const animeStates = reactive<Map<number, AnimeState>>(new Map());
-
-const allEpisodes = reactive<Episode[]>([]);
-
-const isLoading = ref(true);
-
-let tokenConfig: AxiosRequestConfig | undefined = undefined
-const loggedIn = ref(false)
-
-getTokenConfig().then((config) => {
-    tokenConfig = config
-    loggedIn.value = true
-})
-
-
-onMounted(() => {
-    httpClient.get('/anime/all').then((response) => {
-        const data = response.data as AnimeState[];
-        data.forEach((animeState) => {
-            animeStates.set(animeState.anime_id, animeState);
-        });
-        isLoading.value = false;
-    });
-});
+import { AnimeViewModel } from '@/AnimeViewModel';
+import { onMounted } from 'vue';
 
 const animesToday = reactive<number[]>([]);
 
 const episodesNotWatched = reactive<Map<number, Episode[]>>(new Map());
 
-watch(animeStates, (newValue) => {
-    newValue.forEach((animeState) => {
-        bangumiClient.get('/v0/episodes', {
-            params: {
-                subject_id: animeState.anime_id,
-                type: 0
-            }
-        }).then((response) => {
-            const data = response.data.data as Episode[];
-            // clear allEpisodes and add new episodes
-            allEpisodes.splice(0, allEpisodes.length, ...data);
+const viewModel = AnimeViewModel.getInstance();
+
+const isLoading = ref(false)
+
+onMounted(() => {
+    loadData(viewModel.allAnimeStates);
+});
+
+watch(viewModel.allAnimeStates, (newValue) => {
+    loadData(newValue);
+});
+
+function loadData(animeStates: Map<number, AnimeState>) {
+    isLoading.value = true;
+    animeStates.forEach((animeState) => {
+        viewModel.getAnimeEpisodes(animeState.anime_item.id).then((episodes) => {
             // update not watched
-            const notWatched = data.filter((episode) => {
+            const notWatched = episodes.filter((episode) => {
                 return (!animeState.watched_episodes.includes(episode.ep)) && (new Date(episode.airdate) < new Date());
             });
             if (notWatched.length > 0) {
                 episodesNotWatched.set(animeState.anime_id, notWatched);
+            } else {
+                episodesNotWatched.delete(animeState.anime_id);
             }
-            
             // update animesToday
             const today = dayjs().format('YYYY-MM-DD');
-            const todayEpisodes = data.filter((episode) => {
+            const todayEpisodes = episodes.filter((episode) => {
                 return episode.airdate === today;
             });
             // clear animesToday and add new anime
@@ -64,47 +45,33 @@ watch(animeStates, (newValue) => {
                     animesToday.push(animeState.anime_id);
                 }
             }
+        }).finally(() => {
+            isLoading.value = false;
         });
     });
-});
+}
 
 function openBangumi(anime_id: number) {
     window.open(`https://bangumi.tv/subject/${anime_id}`, '_blank');
 }
 
 function changeWatchedState(animeId: number, ep: number) {
-    if(loggedIn.value){
-        const watched = animeStates.get(animeId)?.watched_episodes.includes(ep) ?? false
-        const nowWatched = !watched
-        httpClient.post('anime/update_episode_watched_state', {
-            anime_id: animeId,
-            ep: ep,
-            watched: nowWatched
-        }, tokenConfig).then(() => {
-            if(nowWatched){
-                animeStates.get(animeId)?.watched_episodes.push(ep)
-            }else{
-                const index = animeStates.get(animeId)?.watched_episodes.indexOf(ep)
-                if(index !== undefined && index !== -1){
-                    animeStates.get(animeId)?.watched_episodes.splice(index,1)
-                }
-            }
-        })
-    }
+    viewModel.changeWatchedState(animeId, ep);
 }
 
 </script>
 
 <template>
     <v-progress-linear v-if="isLoading" indeterminate></v-progress-linear>
+
     <div class="wrapper">
         <div class="today">
             <span class="title">Air Today</span>
             <div class="today_list">
                 <div class="anime_card" v-for="animeId in animesToday" :key="animeId">
-                    <img class="anime_img" :src="animeStates.get(animeId)?.anime_item.images.medium"
+                    <img class="anime_img" :src="viewModel.allAnimeStates.get(animeId)?.anime_item.images.medium"
                         @click="openBangumi(animeId)" />
-                    <span class="anime_name">{{ animeStates.get(animeId)?.anime_item.name_cn }}</span>
+                    <span class="anime_name">{{ viewModel.allAnimeStates.get(animeId)?.anime_item.name_cn }}</span>
                 </div>
             </div>
         </div>
@@ -113,7 +80,8 @@ function changeWatchedState(animeId: number, ep: number) {
             <v-list>
                 <v-list-item>
                     <AnimeStateItem class="anime_item" v-for="anime_id in episodesNotWatched.keys()" :key="anime_id"
-                        :state="animeStates.get(anime_id)" :show-all="false" @change-watched-state="(ep)=>changeWatchedState(anime_id,ep)"/>
+                        :state="viewModel.allAnimeStates.get(anime_id)" :show-all="false"
+                        @change-watched-state="(ep) => changeWatchedState(anime_id, ep)" />
                 </v-list-item>
             </v-list>
         </div>
@@ -121,7 +89,6 @@ function changeWatchedState(animeId: number, ep: number) {
 </template>
 
 <style scoped>
-
 .skeleton {
     width: 90%;
     margin-top: 1rem;

@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { bangumiClient, getTokenConfig, httpClient } from '@/ApiHelper';
+import { AnimeViewModel } from '@/AnimeViewModel';
 import { useClipboard } from '@vueuse/core';
-import { AxiosRequestConfig } from 'axios';
 import { reactive, type PropType, onMounted, computed, ref } from 'vue';
 
 const props = defineProps({
@@ -13,6 +12,8 @@ const props = defineProps({
         default: true,
     }
 })
+
+const viewModel = AnimeViewModel.getInstance()
 
 const emits = defineEmits<{
     changeWatchedState: [ep: number],
@@ -46,23 +47,10 @@ const episodesToShow = computed(() => {
     }
 })
 
-let tokenConfig: AxiosRequestConfig | undefined = undefined
-
 onMounted(() => {
-    bangumiClient.get(`/v0/episodes`, {
-        params: {
-            subject_id: props.state?.anime_item.id,
-            type: 0,
-        }
-    }).then((response) => {
-        episodes.splice(0, episodes.length, ...response.data.data)
+    viewModel.getAnimeEpisodes(props.state?.anime_item.id ?? 0).then((res) => {
+        episodes.splice(0, episodes.length, ...res)
     })
-
-    getTokenConfig().then((config) => {
-        loggedIn.value = true
-        tokenConfig = config
-    })
-
 })
 
 function episodeWatched(ep: number) {
@@ -87,12 +75,7 @@ const ratingProcessing = ref(false)
 
 function updateRating() {
     ratingProcessing.value = true
-    httpClient.post('/anime/update_anime_rating', {
-        anime_id: props.state?.anime_item.id,
-        rating: rating.value,
-    },tokenConfig).then(()=>{
-        window.location.reload()
-    }).finally(() => {
+    viewModel.updateRating(props.state?.anime_item.id ?? 0, rating.value).then(() => {
         ratingProcessing.value = false
         showRatingDialog.value = false
     })
