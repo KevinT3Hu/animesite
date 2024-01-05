@@ -59,8 +59,11 @@ function createNewWatchList() {
 // }
 
 function navigateToWatchList(title:string) {
-  console.log(title)
   router.push({ name: 'watchList', params: { title: title } })
+}
+
+function navigateToCalendar() {
+  router.push({ name: 'calendar' })
 }
 
 const loginOverlay = ref(false);
@@ -90,7 +93,12 @@ const scrollBehavior = isMobile ? 'collapse' : undefined
         <v-app-bar-nav-icon @click.stop="drawer=true"></v-app-bar-nav-icon>
       </template>
 
-      <v-app-bar-title>Anime</v-app-bar-title>
+      <v-app-bar-title>
+        Anime
+        <v-btn icon @click="navigateToCalendar">
+          <v-icon>mdi-calendar-month</v-icon>
+        </v-btn>
+      </v-app-bar-title>
 
       <template #append>
         <v-btn v-if="!viewModel.loggedIn" @click="loginOverlay = true" icon>

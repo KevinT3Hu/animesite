@@ -12,6 +12,11 @@ const routes = [
     component: () => import("@/views/WatchListView.vue"),
     name: 'watchList',
     props: true
+  },
+  {
+    path: '/calendar',
+    component: () => import("@/views/Calendar.vue"),
+    name: 'calendar',
   }
 ];
 

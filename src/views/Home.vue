@@ -141,6 +141,7 @@ function changeWatchedState(animeId: number, ep: number) {
 }
 
 .anime_img:hover {
+    background-color: #e0e0e0;
     cursor: pointer;
 }
 
