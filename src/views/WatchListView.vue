@@ -84,7 +84,7 @@ const showDetails = ref(true)
                 </v-btn>
                 <v-dialog width="500">
                     <template v-slot:activator="{ props }">
-                        <v-btn v-if="viewModel.loggedIn" icon v-bind="props">
+                        <v-btn v-if="viewModel.loggedIn.value" icon v-bind="props">
                             <v-icon>mdi-delete</v-icon>
                         </v-btn>
                     </template>
@@ -103,7 +103,7 @@ const showDetails = ref(true)
                     </template>
 
                 </v-dialog>
-                <v-btn v-if="viewModel.loggedIn" icon @click="showAddAnimeDrawer = true">
+                <v-btn v-if="viewModel.loggedIn.value" icon @click="showAddAnimeDrawer = true">
                     <v-icon>mdi-plus</v-icon>
                 </v-btn>
             </div>
