@@ -148,6 +148,7 @@ export class AnimeViewModel {
       })
       .then((res) => {
         this._tokenConfig = generateTokenConfig(res.data);
+        this._loggedIn.value = true;
         localStorage.setItem("token", res.data);
         return LoginResult.Success;
       })
