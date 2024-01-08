@@ -25,8 +25,6 @@ const { copy } = useClipboard()
 const episodes = reactive<Episode[]>([])
 const rating = ref<number>(props.state?.rating ?? 0)
 
-const loggedIn = ref(false)
-
 const episodesToShow = computed(() => {
     if (props.showAll) {
         return episodes
@@ -104,7 +102,7 @@ function showRating() {
                     <v-btn variant="text" icon="mdi-content-copy" @click="copyTitle" class="h-25"></v-btn>
                     <span v-if="state?.rating" class="ml-2" style="color:blue">{{ state?.rating }} / 5</span>
                 </div>
-                <div v-if="loggedIn" class="anime_actions">
+                <div v-if="viewModel.loggedIn.value" class="anime_actions">
                     <v-btn icon @click="changeArchivedState(!state?.archived)">
                         <v-icon>{{ state?.archived ? 'mdi-unarchive' : 'mdi-archive' }}</v-icon>
                     </v-btn>
