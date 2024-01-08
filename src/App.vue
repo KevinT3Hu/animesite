@@ -101,7 +101,7 @@ const scrollBehavior = isMobile ? 'collapse' : undefined
       </v-app-bar-title>
 
       <template #append>
-        <v-btn v-if="!viewModel.loggedIn" @click="loginOverlay = true" icon>
+        <v-btn v-if="!viewModel.loggedIn.value" @click="loginOverlay = true" icon>
           <v-icon>mdi-login</v-icon>
         </v-btn>
         <v-btn v-else icon>

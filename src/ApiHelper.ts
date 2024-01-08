@@ -9,6 +9,7 @@ export const bangumiClient = axios.create({
 })
 
 export function getTokenConfig():Promise<AxiosRequestConfig> {
+
     const token = localStorage.getItem("token")
     if(token==undefined) {
         return Promise.reject()
