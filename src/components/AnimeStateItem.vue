@@ -64,8 +64,8 @@ function changeWatchedState(ep: number, date: string) {
     }
 }
 
-function changeArchivedState(archived: boolean) {
-    viewModel.changeArchivedState(props.state?.anime_item.id ?? 0, archived)
+function changeVisibility(visibility: boolean) {
+    viewModel.changeVisibility(props.state?.anime_item.id ?? 0, visibility)
 }
 
 const ratingProcessing = ref(false)
@@ -102,8 +102,8 @@ function showRating() {
                     <span v-if="state?.rating" class="ml-2" style="color:blue">{{ state?.rating }} / 5</span>
                 </div>
                 <div v-if="viewModel.loggedIn.value" class="anime_actions">
-                    <v-btn icon @click="changeArchivedState(!state?.archived)">
-                        <v-icon>{{ state?.archived ? 'mdi-unarchive' : 'mdi-archive' }}</v-icon>
+                    <v-btn icon @click="changeVisibility(!state?.visibility)">
+                        <v-icon>{{ state?.visibility ? 'mdi-archive' : 'mdi-unarchive' }}</v-icon>
                     </v-btn>
                     <v-btn icon @click="showRating">
                         <v-icon>mdi-thumbs-up-down</v-icon>

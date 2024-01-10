@@ -14,16 +14,18 @@ const viewModel = AnimeViewModel.getInstance();
 const isLoading = ref(false)
 
 onMounted(() => {
-    loadData(viewModel.allAnimeStates);
+    loadData(viewModel.visibleAnimeStates.value);
 });
 
-watch(viewModel.allAnimeStates, (newValue) => {
+watch(viewModel.visibleAnimeStates, (newValue) => {
     loadData(newValue);
 });
 
 function loadData(animeStates: Map<number, AnimeState>) {
     isLoading.value = true;
     animeStates.forEach((animeState) => {
+        episodesNotWatched.clear()
+        animesToday.splice(0, animesToday.length);
         viewModel.getAnimeEpisodes(animeState.anime_item.id).then((episodes) => {
             // update not watched
             const notWatched = episodes.filter((episode) => {

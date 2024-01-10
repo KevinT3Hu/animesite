@@ -35,7 +35,6 @@ interface AnimeState {
     favorite: boolean;
     watched_episodes: number[];
     visibility: boolean;
-    archived: boolean;
     rating?: number;
 }
 

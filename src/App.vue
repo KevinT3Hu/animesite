@@ -66,6 +66,10 @@ function navigateToCalendar() {
   router.push({ name: 'calendar' })
 }
 
+function navigateToArchived() {
+  router.push({ name: 'archived' })
+}
+
 const loginOverlay = ref(false);
 const loginProcessing = ref(false);
 const serverError = ref(false);
@@ -97,6 +101,9 @@ const scrollBehavior = isMobile ? 'collapse' : undefined
         Anime
         <v-btn icon @click="navigateToCalendar">
           <v-icon>mdi-calendar-month</v-icon>
+        </v-btn>
+        <v-btn icon @click="navigateToArchived">
+          <v-icon>mdi-archive</v-icon>
         </v-btn>
       </v-app-bar-title>
 

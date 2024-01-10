@@ -1,5 +1,5 @@
 import { AxiosRequestConfig } from "axios";
-import { Ref, reactive, ref } from "vue";
+import { Ref, computed, reactive, ref } from "vue";
 import {
   bangumiClient,
   generateTokenConfig,
@@ -18,10 +18,48 @@ export class AnimeViewModel {
   public get allWatchLists() {
     return this._allWatchLists;
   }
+
   private _allAnimes: Map<string, number[]> = reactive(new Map<string, []>());
   public get allAnimes() {
     return this._allAnimes;
   }
+
+  public get visibleAnimes() {
+    return computed(() => {
+      const ret = new Map<string, number[]>()
+      for(const [key, value] of this._allAnimes) {
+        ret.set(key, value.filter((animeId) => {
+          return this._allAnimeStates.get(animeId)?.visibility
+        }))
+      }
+      return ret
+    })
+  }
+
+  public get archivedAnimes() {
+    return computed(() => {
+      const ret = new Set<AnimeState>()
+      for(const [_, state] of this._allAnimeStates) {
+        if(!state.visibility) {
+          ret.add(state)
+        }
+      }
+      return ret
+    })
+  }
+
+  public get visibleAnimeStates() {
+    return computed(() => {
+      const ret = new Map<number, AnimeState>()
+      for(const [key, value] of this._allAnimeStates) {
+        if(value.visibility) {
+          ret.set(key, value)
+        }
+      }
+      return ret
+    })
+  }
+
   private _allAnimeStates: Map<number, AnimeState> = reactive(
     new Map<number, AnimeState>()
   );
@@ -261,18 +299,18 @@ export class AnimeViewModel {
     }
   }
 
-  public async changeArchivedState(animeId: number, archived: boolean) {
+  public async changeVisibility(animeId: number, visibility: boolean) {
     return httpClient.post(
       "anime/update_anime_visibility",
       {
         anime_id: animeId,
-        visibility: !archived,
+        visible: visibility,
       },
       this._tokenConfig
     ).then(() => {
       this._allAnimeStates.set(animeId, {
         ...this._allAnimeStates.get(animeId)!!,
-        archived: !archived,
+        visibility: visibility
       });
     });
   }
