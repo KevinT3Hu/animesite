@@ -1,5 +1,5 @@
 import { AxiosRequestConfig } from "axios";
-import { Ref, computed, reactive, ref } from "vue";
+import { Ref, computed, nextTick, reactive, ref } from "vue";
 import {
   bangumiClient,
   generateTokenConfig,
@@ -7,6 +7,7 @@ import {
   httpClient,
 } from "./ApiHelper";
 import { useStorage } from "@vueuse/core";
+import { moveArrayElement } from "@vueuse/integrations/useSortable";
 
 export enum LoginResult {
   Success,
@@ -131,12 +132,13 @@ export class AnimeViewModel {
 
   public changeWatchListOrder(oldIndex: number, newIndex: number) {
     // for magic reasons, this doesn't work so we need to do it manually
-    // moveArrayElement(this._allWatchLists, oldIndex, newIndex)
-    const watchList = this._allWatchLists[oldIndex]
-    this._allWatchLists.splice(oldIndex, 1)
-    this._allWatchLists.splice(newIndex, 0, watchList)
-
-    this._watchListsOrder.value = this._allWatchLists.map((watchList) => watchList.title)
+    moveArrayElement(this._allWatchLists, oldIndex, newIndex)
+    // const watchList = this._allWatchLists[oldIndex]
+    // this._allWatchLists.splice(oldIndex, 1)
+    // this._allWatchLists.splice(newIndex, 0, watchList)
+    nextTick(() => {
+      this._watchListsOrder.value = this._allWatchLists.map((watchList) => watchList.title)
+    })
   }
 
   public async fetchWatchList(sort:boolean=false): Promise<void> {

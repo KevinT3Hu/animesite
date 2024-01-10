@@ -6,6 +6,7 @@ import AnimeStateItem from '@/components/AnimeStateItem.vue';
 import { useRouter } from 'vue-router';
 import { AnimeViewModel } from '@/AnimeViewModel';
 import { computed } from 'vue';
+import { nextTick } from 'vue';
 
 const props = defineProps({
     title: {
@@ -17,6 +18,8 @@ const viewModel = AnimeViewModel.getInstance()
 
 const router = useRouter()
 
+const searching = ref(false)
+
 const animeStates = computed(()=>{
     return viewModel.allAnimes.get(props.title!!)!![1].map(id => {
         return viewModel.allAnimeStates.get(id)!!
@@ -25,6 +28,8 @@ const animeStates = computed(()=>{
 
 const animeSearch = ref('')
 const searchResults = reactive<AnimeSearchResult[]>([])
+
+const search = ref<HTMLElement|null>(null)
 
 function processAddAnime(id: number) {
     // get AnimeItem from bangumi
@@ -40,6 +45,8 @@ function changeWatchedState(animeId: number, ep: number) {
 }
 
 function searchForAnime() {
+    searching.value = true
+    searchResults.splice(0, searchResults.length)
     bangumiClient.post('v0/search/subjects', {
         keyword: animeSearch.value,
         filter: {
@@ -48,6 +55,8 @@ function searchForAnime() {
     }).then((response) => {
         const data = response.data.data
         searchResults.splice(0, searchResults.length, ...data)
+    }).finally(() => {
+        searching.value = false
     })
 }
 
@@ -66,6 +75,13 @@ function updateWatchListArchived() {
             name: 'home',
         })
         window.location.reload()
+    })
+}
+
+function openSearchPanel(){
+    showAddAnimeDrawer.value = true
+    nextTick(()=>{
+        search.value?.focus()
     })
 }
 
@@ -111,20 +127,19 @@ const showDetails = ref(true)
                     </template>
 
                 </v-dialog>
-                <v-btn v-if="viewModel.loggedIn.value" icon @click="showAddAnimeDrawer = true">
+                <v-btn v-if="viewModel.loggedIn.value" icon @click="openSearchPanel">
                     <v-icon>mdi-plus</v-icon>
                 </v-btn>
             </div>
         </v-toolbar>
     </v-layout>
 
-    <v-navigation-drawer v-model="showAddAnimeDrawer" location="right" temporary width="500">
+    <v-navigation-drawer v-model="showAddAnimeDrawer" location="right" temporary width="700">
         <template #prepend>
             <v-layout class="horizontal mx-4 mt-2">
-                <v-text-field v-model="animeSearch" label="Search Anime" class="mr-2 rounded-xl" focused></v-text-field>
-                <v-btn icon @click="searchForAnime">
+                <v-text-field ref="search" @keyup.enter="searchForAnime" v-model="animeSearch" label="Search Anime" class="mr-2 rounded-xl" focused></v-text-field>
+                <v-btn icon @click="searchForAnime" :loading="searching">
                     <v-icon>mdi-magnify</v-icon>
-                    <input @keyup.enter="searchForAnime" type="hidden">
                 </v-btn>
             </v-layout>
         </template>
