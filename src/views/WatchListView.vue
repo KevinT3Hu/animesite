@@ -39,10 +39,6 @@ function changeWatchedState(animeId: number, ep: number) {
     viewModel.changeWatchedState(animeId, ep)
 }
 
-function changeArchivedState(animeId: number) {
-    // TODO
-}
-
 function searchForAnime() {
     bangumiClient.post('v0/search/subjects', {
         keyword: animeSearch.value,
@@ -134,8 +130,7 @@ const showDetails = ref(true)
     <v-list v-if="showDetails">
         <v-list-item v-for="animeState in animeStates" :key="animeState.anime_id">
             <AnimeStateItem :state="animeState" v-if="animeState.visibility"
-                @change-watched-state="(ep) => changeWatchedState(animeState.anime_id, ep)"
-                @change-archived-state="changeArchivedState(animeState.anime_id)" />
+                @change-watched-state="(ep) => changeWatchedState(animeState.anime_id, ep)" />
         </v-list-item>
     </v-list>
 

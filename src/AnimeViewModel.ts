@@ -261,6 +261,22 @@ export class AnimeViewModel {
     }
   }
 
+  public async changeArchivedState(animeId: number, archived: boolean) {
+    return httpClient.post(
+      "anime/update_anime_visibility",
+      {
+        anime_id: animeId,
+        visibility: !archived,
+      },
+      this._tokenConfig
+    ).then(() => {
+      this._allAnimeStates.set(animeId, {
+        ...this._allAnimeStates.get(animeId)!!,
+        archived: !archived,
+      });
+    });
+  }
+
   public async deleteWatchList(watchListName: string) {
     return httpClient.post(
       "anime/delete_watch_list",

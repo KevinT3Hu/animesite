@@ -16,8 +16,7 @@ const props = defineProps({
 const viewModel = AnimeViewModel.getInstance()
 
 const emits = defineEmits<{
-    changeWatchedState: [ep: number],
-    changeArchivedState: [archived: boolean],
+    changeWatchedState: [ep: number]
 }>()
 
 const { copy } = useClipboard()
@@ -66,7 +65,7 @@ function changeWatchedState(ep: number, date: string) {
 }
 
 function changeArchivedState(archived: boolean) {
-    emits('changeArchivedState', archived)
+    viewModel.changeArchivedState(props.state?.anime_item.id ?? 0, archived)
 }
 
 const ratingProcessing = ref(false)
