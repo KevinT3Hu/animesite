@@ -2,6 +2,8 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { AnimeViewModel, LoginResult } from './AnimeViewModel';
+import { useSortable } from '@vueuse/integrations/useSortable';
+import { computed } from 'vue';
 
 const router = useRouter();
 
@@ -87,6 +89,20 @@ watch(loginOverlay, (newValue) => {
 const isMobile = window.innerWidth <= 768
 const scrollBehavior = isMobile ? 'collapse' : undefined
 
+const allWatchLists = viewModel.allWatchLists
+const sortableEl = ref<HTMLElement|null>(null)
+
+useSortable(sortableEl,allWatchLists,{
+  onUpdate: (e:any)=>{
+    viewModel.changeWatchListOrder(e.oldIndex,e.newIndex)
+  },
+  animation: 250
+})
+
+const hasArchivedWatchLists = computed(()=>{
+  return viewModel.archivedWatchLists.value.size > 0
+})
+
 </script>
 
 <template>
@@ -148,8 +164,20 @@ const scrollBehavior = isMobile ? 'collapse' : undefined
     <v-navigation-drawer v-model="drawer">
       <v-list nav>
         <v-list-item title="Home" value="home" @click="$router.push({name:'home'})"></v-list-item>
-        <v-list-item v-for="watchList in viewModel.allWatchLists" :key="watchList.title" @click="navigateToWatchList(watchList.title)" :title="watchList.title" :value="watchList.title">
-        </v-list-item>
+        <div ref="sortableEl">
+          <v-list-item v-for="watchList in viewModel.visibleWatchLists.value" :key="watchList.title" @click="navigateToWatchList(watchList.title)" :title="watchList.title" :value="watchList.title">
+          </v-list-item>
+        </div>
+        <v-list-group v-if="hasArchivedWatchLists">
+          <template v-slot:activator="{ props }">
+            <v-list-item v-bind="props">
+              <v-list-item-title>Archived Lists</v-list-item-title>
+            </v-list-item>
+          </template>
+
+          <v-list-item v-for="watchList in viewModel.archivedWatchLists.value" :key="watchList[0]" @click="navigateToWatchList(watchList[0])" :title="watchList[0]" :value="watchList[0]">
+          </v-list-item>
+        </v-list-group>
       </v-list>
       <v-divider></v-divider>
 

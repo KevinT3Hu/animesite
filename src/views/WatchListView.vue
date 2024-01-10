@@ -18,7 +18,7 @@ const viewModel = AnimeViewModel.getInstance()
 const router = useRouter()
 
 const animeStates = computed(()=>{
-    return viewModel.allAnimes.get(props.title!!)!!.map((id) => {
+    return viewModel.allAnimes.get(props.title!!)!![1].map(id => {
         return viewModel.allAnimeStates.get(id)!!
     })
 })
@@ -60,6 +60,15 @@ function deleteWatchList() {
     })
 }
 
+function updateWatchListArchived() {
+    viewModel.changeWatchListArchived(props.title!!).then(() => {
+        router.push({
+            name: 'home',
+        })
+        window.location.reload()
+    })
+}
+
 const processing = ref(false)
 
 const showAddAnimeDrawer = ref(false)
@@ -74,6 +83,9 @@ const showDetails = ref(true)
             <v-toolbar-title>{{ title }}</v-toolbar-title>
             <v-spacer></v-spacer>
             <div>
+                <v-btn icon @click="updateWatchListArchived">
+                    <v-icon>mdi-archive</v-icon>
+                </v-btn>
                 <v-btn icon @click="showDetails = !showDetails">
                     <v-icon v-if="showDetails">mdi-eye</v-icon>
                     <v-icon v-else>mdi-eye-off</v-icon>
@@ -119,7 +131,7 @@ const showDetails = ref(true)
         <v-list>
             <v-list-item v-for="result in searchResults" :key="result.id">
                 <anime-item :name_cn="result.name_cn" :name="result.name" :image="result.image" :summary="result.summary"
-                    :id="result.id" :rank="result.rank" :score="result.score" :contained="viewModel.allAnimes.get(props.title!!)!!.includes(result.id)"
+                    :id="result.id" :rank="result.rank" :score="result.score" :contained="viewModel.allAnimes.get(props.title!!)!![1].includes(result.id)"
                     @add="processAddAnime(result.id)"></anime-item>
             </v-list-item>
         </v-list>

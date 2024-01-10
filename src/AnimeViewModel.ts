@@ -6,6 +6,7 @@ import {
   getTokenConfig,
   httpClient,
 } from "./ApiHelper";
+import { useStorage } from "@vueuse/core";
 
 export enum LoginResult {
   Success,
@@ -19,22 +20,47 @@ export class AnimeViewModel {
     return this._allWatchLists;
   }
 
-  private _allAnimes: Map<string, number[]> = reactive(new Map<string, []>());
+  public get visibleWatchLists() {
+    return computed(() => {
+      return this._allWatchLists.filter((watchList) => {
+        return !watchList.archived
+      })
+    })
+  }
+
+  private _allAnimes: Map<string, [boolean,number[]]> = reactive(new Map<string, [boolean,number[]]>());
   public get allAnimes() {
     return this._allAnimes;
+  }
+
+  private _archivedWatchLists = computed(() => {
+    const ret = new Map<string, number[]>()
+    for(const [key, [archived,value]] of this._allAnimes) {
+      if(archived) {
+        ret.set(key, value)
+      }
+    }
+    return ret
+  })
+  public get archivedWatchLists() {
+    return this._archivedWatchLists
   }
 
   public get visibleAnimes() {
     return computed(() => {
       const ret = new Map<string, number[]>()
-      for(const [key, value] of this._allAnimes) {
-        ret.set(key, value.filter((animeId) => {
-          return this._allAnimeStates.get(animeId)?.visibility
-        }))
+      for(const [key, [archived,value]] of this._allAnimes) {
+        if(!archived) {
+          ret.set(key, value.filter((animeId) => {
+            return this._allAnimeStates.get(animeId)?.visibility
+          }))
+        }
       }
       return ret
     })
   }
+
+  private _watchListsOrder:Ref<string[]> = useStorage("watch_list_order", [])
 
   public get archivedAnimes() {
     return computed(() => {
@@ -97,41 +123,63 @@ export class AnimeViewModel {
         this._loggedIn.value = true;
       })
       .finally(() => {
-        this.fetchWatchList().then(() => {
+        this.fetchWatchList(true).then(() => {
           this.fetchAllAnimes();
         });
       });
   }
 
-  public async fetchWatchList(): Promise<void> {
+  public changeWatchListOrder(oldIndex: number, newIndex: number) {
+    // for magic reasons, this doesn't work so we need to do it manually
+    // moveArrayElement(this._allWatchLists, oldIndex, newIndex)
+    const watchList = this._allWatchLists[oldIndex]
+    this._allWatchLists.splice(oldIndex, 1)
+    this._allWatchLists.splice(newIndex, 0, watchList)
+
+    this._watchListsOrder.value = this._allWatchLists.map((watchList) => watchList.title)
+  }
+
+  public async fetchWatchList(sort:boolean=false): Promise<void> {
     return httpClient
       .get<WatchList[]>("/anime/list", this._tokenConfig)
       .then((response) => {
-        this._allWatchLists.splice(
-          0,
-          this._allWatchLists.length,
-          ...response.data
-        );
+        if(sort) {
+          const order = this._watchListsOrder.value
+          const ret = []
+          for(const title of order) {
+            const watchList = response.data.find((watchList) => watchList.title === title)
+            if(watchList) {
+              ret.push(watchList)
+            }
+          }
+          // push the rest
+          for(const watchList of response.data) {
+            if(!ret.includes(watchList)) {
+              ret.push(watchList)
+            }
+          }
+          this._allWatchLists.splice(0, this._allWatchLists.length, ...ret);
+
+        } else {
+          this._allWatchLists.splice(
+            0,
+            this._allWatchLists.length,
+            ...response.data
+          );
+        }
       });
   }
 
   public fetchAllAnimes() {
     this._loading.value = true;
     this._allWatchLists.forEach((watchList) => {
-      httpClient
-        .get<WatchList>("/anime/get_watch_list", {
-          params: {
-            watch_list_name: watchList.title,
-          },
-          ...this._tokenConfig,
-        })
-        .then((response) => {
-          this._allAnimes.set(watchList.title, response.data.animes);
+
+          this._allAnimes.set(watchList.title, [watchList.archived,watchList.animes]);
           httpClient
             .post<AnimeState[]>(
               `/anime/get_anime_states`,
               {
-                anime_ids: response.data.animes,
+                anime_ids: watchList.animes,
               },
               this._tokenConfig
             )
@@ -140,12 +188,10 @@ export class AnimeViewModel {
               states_response.data.forEach((state) => {
                 this._allAnimeStates.set(state.anime_id, state);
               });
+
             });
-        })
-        .finally(() => {
-          this._loading.value = false;
         });
-    });
+    this._loading.value = false;
   }
 
   public async getAnimeEpisodes(animeId: number): Promise<Episode[]> {
@@ -208,7 +254,9 @@ export class AnimeViewModel {
         this._tokenConfig
       )
       .then(() => {
-        this.fetchWatchList();
+        this.fetchWatchList().then(() => {
+          this.fetchAllAnimes();
+        })
         return true;
       })
       .catch(() => {
@@ -237,7 +285,7 @@ export class AnimeViewModel {
               )
               .then(() => {
                 this.sb("Anime added to watch list");
-                this._allAnimes.get(watchListName)?.push(animeId);
+                this._allAnimes.get(watchListName)?.[1].push(animeId);
                 httpClient
                   .post<AnimeState[]>(
                     "anime/get_anime_states",
@@ -312,6 +360,20 @@ export class AnimeViewModel {
         ...this._allAnimeStates.get(animeId)!!,
         visibility: visibility
       });
+    });
+  }
+
+  public async changeWatchListArchived(watchListName: string) {
+    const archived = !this._allAnimes.get(watchListName)!![0]
+    return httpClient.post(
+      "anime/update_watch_list_archived",
+      {
+        watch_list_name: watchListName,
+        archived: archived,
+      },
+      this._tokenConfig
+    ).then(() => {
+      this._allAnimes.set(watchListName, [archived, this._allAnimes.get(watchListName)!![1]])
     });
   }
 
