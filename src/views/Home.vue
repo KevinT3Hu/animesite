@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue';
 import dayjs from 'dayjs';
-import AnimeStateItem from '@/components/AnimeStateItem.vue';
+import AnimeStateItem from '@/components/AnimeStateItem/AnimeStateItem.vue';
 import { AnimeViewModel } from '@/AnimeViewModel';
 import { onMounted } from 'vue';
 
@@ -82,7 +82,7 @@ function changeWatchedState(animeId: number, ep: number) {
             <v-list>
                 <v-list-item>
                     <AnimeStateItem class="anime_item" v-for="anime_id in episodesNotWatched.keys()" :key="anime_id"
-                        :state="viewModel.allAnimeStates.get(anime_id)" :show-all="false"
+                        :state="viewModel.allAnimeStates.get(anime_id)!!" :show-all="false"
                         @change-watched-state="(ep) => changeWatchedState(anime_id, ep)" />
                 </v-list-item>
             </v-list>

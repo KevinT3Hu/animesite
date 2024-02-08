@@ -2,7 +2,7 @@
 import { bangumiClient } from '@/ApiHelper';
 import { reactive, ref } from 'vue';
 import AnimeItem from '@/components/AnimeItem.vue'
-import AnimeStateItem from '@/components/AnimeStateItem.vue';
+import AnimeStateItem from '@/components/AnimeStateItem/AnimeStateItem.vue';
 import { useRouter } from 'vue-router';
 import { AnimeViewModel } from '@/AnimeViewModel';
 import { computed } from 'vue';

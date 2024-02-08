@@ -6,6 +6,7 @@ import { reactive, type PropType, onMounted, computed, ref } from 'vue';
 const props = defineProps({
     state: {
         type: Object as PropType<AnimeState>,
+        required: true,
     },
     showAll: {
         type: Boolean,
@@ -15,26 +16,22 @@ const props = defineProps({
 
 const viewModel = AnimeViewModel.getInstance()
 
-const emits = defineEmits<{
-    changeWatchedState: [ep: number]
-}>()
-
 const { copy } = useClipboard()
 
 const episodes = reactive<Episode[]>([])
-const rating = ref<number>(props.state?.rating ?? 0)
+const rating = ref<number>(props.state.rating ?? 0)
 
 const episodesToShow = computed(() => {
     if (props.showAll) {
         return episodes
     } else {
-        let showedEpisodes:Episode[] = []
+        let showedEpisodes: Episode[] = []
         let containOne = true
         episodes.forEach((episode) => {
             if (!episodeWatched(episode.ep)) {
-                if(episodeAired(episode.airdate)){
+                if (episodeAired(episode.airdate)) {
                     showedEpisodes.push(episode)
-                } else if(containOne) {
+                } else if (containOne) {
                     showedEpisodes.push(episode)
                     containOne = false
                 }
@@ -45,13 +42,13 @@ const episodesToShow = computed(() => {
 })
 
 onMounted(() => {
-    viewModel.getAnimeEpisodes(props.state?.anime_item.id ?? 0).then((res) => {
+    viewModel.getAnimeEpisodes(props.state.anime_item.id).then((res) => {
         episodes.splice(0, episodes.length, ...res)
     })
 })
 
 function episodeWatched(ep: number) {
-    return props.state?.watched_episodes.includes(ep) ?? false
+    return props.state.watched_episodes.includes(ep) ?? false
 }
 
 function episodeAired(date: string) {
@@ -60,26 +57,26 @@ function episodeAired(date: string) {
 
 function changeWatchedState(ep: number, date: string) {
     if (episodeAired(date)) {
-        emits('changeWatchedState', ep)
+        viewModel.changeWatchedState(props.state.anime_item.id, ep)
     }
 }
 
 function changeVisibility(visibility: boolean) {
-    viewModel.changeVisibility(props.state?.anime_item.id ?? 0, visibility)
+    viewModel.changeVisibility(props.state.anime_item.id, visibility)
 }
 
 const ratingProcessing = ref(false)
 
 function updateRating() {
     ratingProcessing.value = true
-    viewModel.updateRating(props.state?.anime_item.id ?? 0, rating.value).then(() => {
+    viewModel.updateRating(props.state.anime_item.id, rating.value).then(() => {
         ratingProcessing.value = false
         showRatingDialog.value = false
     })
 }
 
 function copyTitle() {
-    copy(props.state?.anime_item.name_cn ?? '')
+    copy(props.state.anime_item.name_cn)
 }
 
 const showRatingDialog = ref(false)
@@ -92,18 +89,18 @@ function showRating() {
 
 <template>
     <div class="s_wrapper">
-        <img class="image" :src="state?.anime_item.images.common" />
+        <img class="image" :src="state.anime_item.images.common" />
         <div class="anime_content">
             <div class="title_bar">
                 <div class="title_wrapper">
-                    <a :href="'https://bangumi.tv/subject/' + state?.anime_item.id" target="_blank"
-                        rel="noopener noreferrer" class="title_cn">{{ state?.anime_item.name_cn }}</a>
+                    <a :href="'https://bangumi.tv/subject/' + state.anime_item.id" target="_blank"
+                        rel="noopener noreferrer" class="title_cn">{{ state.anime_item.name_cn }}</a>
                     <v-btn variant="text" icon="mdi-content-copy" @click="copyTitle" class="h-25"></v-btn>
-                    <span v-if="state?.rating" class="ml-2" style="color:blue">{{ state?.rating }} / 5</span>
+                    <span v-if="state.rating" class="ml-2" style="color:blue">{{ state.rating }} / 5</span>
                 </div>
                 <div v-if="viewModel.loggedIn.value" class="anime_actions">
-                    <v-btn icon @click="changeVisibility(!state?.visibility)">
-                        <v-icon>{{ state?.visibility ? 'mdi-archive' : 'mdi-unarchive' }}</v-icon>
+                    <v-btn icon @click="changeVisibility(!state.visibility)">
+                        <v-icon>{{ state.visibility ? 'mdi-archive' : 'mdi-unarchive' }}</v-icon>
                     </v-btn>
                     <v-btn icon @click="showRating">
                         <v-icon>mdi-thumbs-up-down</v-icon>
@@ -111,7 +108,7 @@ function showRating() {
                 </div>
             </div>
 
-            <p>{{ state?.anime_item.name }}</p>
+            <p>{{ state.anime_item.name }}</p>
             <div class="episodes">
                 <div v-ripple class="episode rounded" v-for="episode in episodesToShow" :key="episode.id"
                     :class="{ not_aired: !episodeAired(episode.airdate), watched: episodeWatched(episode.ep) }"
@@ -125,7 +122,7 @@ function showRating() {
                     </v-tooltip>
                 </div>
             </div>
-            <p>{{ state?.anime_item.summary }}</p>
+            <p>{{ state.anime_item.summary }}</p>
         </div>
     </div>
 
@@ -133,7 +130,7 @@ function showRating() {
 
     <v-dialog width="500" v-model="showRatingDialog">
         <v-card>
-            <v-card-title>Rating {{ state?.anime_item.name_cn }}</v-card-title>
+            <v-card-title>Rating {{ state.anime_item.name_cn }}</v-card-title>
             <v-card-text class="d-flex justify-center">
                 <v-rating v-model="rating" active-color="primary"></v-rating>
             </v-card-text>
@@ -146,89 +143,9 @@ function showRating() {
 </template>
 
 <style scoped>
+    @import "./AnimeStateItem.scss";
+
 .s_wrapper {
-    display: flex;
     flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    margin-left: 10px;
-    margin-right: 10px;
 }
-
-.image {
-    margin-right: 10px;
-    width: 120px;
-    align-self: flex-start;
-}
-
-.anime_content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-}
-
-.episodes {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    flex-flow: wrap;
-}
-
-.title_cn {
-    font-size: 1.2rem;
-    font-weight: bold;
-}
-
-.episode {
-    margin: 5px;
-    width: 35px;
-    height: 35px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #d8eee4;
-}
-
-.episode:hover {
-    cursor: pointer;
-}
-
-.not_aired {
-    border: none;
-    color: gray;
-}
-
-.watched {
-    background-color: #d8eee4;
-}
-
-.name_jp {
-    font-size: 0.6rem;
-}
-
-.title_bar {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.title_wrapper {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-.anime_actions {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
 </style>
