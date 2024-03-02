@@ -21,12 +21,12 @@ interface AnimeItem {
     name: string;
     name_cn: string;
     summary: string;
-    date: string;
+    date?: string;
     eps: number;
     total_episodes: number;
     images: ImageSet;
-    tags: Tag[]|undefined;
-    rating: Rating|undefined;
+    tags?: Tag[];
+    rating?: Rating;
 }
 
 interface AnimeState {
