@@ -10,6 +10,9 @@ import { createApp } from 'vue'
 import '@/styles.css'
 import { getTokenConfig, httpClient } from './ApiHelper'
 
+import '@material/web/iconbutton/icon-button'
+import '@material/web/icon/icon'
+
 const app = createApp(App)
 
 registerPlugins(app)
