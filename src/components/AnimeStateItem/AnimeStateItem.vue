@@ -14,11 +14,6 @@ const props = defineProps({
     }
 })
 
-const emits = defineEmits<{
-    changeWatchedState: [ep: number]
-}>()
-
-
 const isMobile = ref(false)
 
 onMounted(() => {
@@ -32,7 +27,15 @@ window.addEventListener('resize', () => {
 </script>
 
 <template>
-    <div>
+    <div class="wrapper">
         <component :is="isMobile ? AnimeStateItemMobile : AnimeStateItemDesktop" v-bind="props"/>
     </div>
 </template>
+
+<style scoped>
+
+.wrapper {
+    width: 100%;
+}
+
+</style>

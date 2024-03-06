@@ -85,6 +85,10 @@ function showRating() {
     showRatingDialog.value = true
 }
 
+const anime_name_primary = computed(() => {
+    return props.state.anime_item.name_cn === "" ? props.state.anime_item.name : props.state.anime_item.name_cn
+})
+
 </script>
 
 <template>
@@ -104,7 +108,7 @@ function showRating() {
             <div class="title_bar">
                 <div class="title_wrapper">
                     <a :href="'https://bangumi.tv/subject/' + state.anime_item.id" target="_blank"
-                        rel="noopener noreferrer" class="title_cn">{{ state.anime_item.name_cn }}</a>
+                        rel="noopener noreferrer" class="title_cn">{{ anime_name_primary }}</a>
                     <v-btn variant="text" icon="mdi-content-copy" @click="copyTitle" class="h-25"></v-btn>
                     <span v-if="state.rating" class="ml-2" style="color:blue">{{ state.rating }} / 5</span>
                 </div>

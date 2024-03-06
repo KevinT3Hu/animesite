@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+
 
 const props = defineProps({
     name_cn: {
@@ -33,6 +35,10 @@ const props = defineProps({
 
 const bangumiUrl = 'https://bangumi.tv/subject/' + props.id
 
+const anime_name_primary = computed(() => {
+    return props.name_cn === "" ? props.name : props.name_cn
+})
+
 </script>
 
 <template>
@@ -41,7 +47,7 @@ const bangumiUrl = 'https://bangumi.tv/subject/' + props.id
         <div>
             <div class="title_bar">
                 <div class="title_l">
-                    <a :href="bangumiUrl" target="_blank" rel="noopener noreferrer" class="title_cn">{{ name_cn }}</a>
+                    <a :href="bangumiUrl" target="_blank" rel="noopener noreferrer" class="title_cn">{{ anime_name_primary }}</a>
                     <p class="rating">#{{ rank }}</p>
                     <p class="rating">{{ score }}</p>
                 </div>
@@ -61,6 +67,7 @@ const bangumiUrl = 'https://bangumi.tv/subject/' + props.id
     display: flex;
     flex-direction: row;
     align-items: center;
+    width: 100%;
     padding: 10px;
 }
 
