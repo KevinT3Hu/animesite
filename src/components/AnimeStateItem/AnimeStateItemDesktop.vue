@@ -152,4 +152,8 @@ const anime_name_primary = computed(() => {
 .s_wrapper {
     flex-direction: row;
 }
+
+.anime_content {
+  flex-grow: 1;
+}
 </style>
